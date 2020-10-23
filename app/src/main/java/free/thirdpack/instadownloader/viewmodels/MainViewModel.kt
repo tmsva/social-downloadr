@@ -14,34 +14,30 @@ import free.thirdpack.instadownloader.api.InstagramService
 import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.*
 
-class MainViewModel(val app: Application) : AndroidViewModel(app) {
+class MainViewModel(app: Application) : AndroidViewModel(app) {
+    val downloadManager = app.getSystemService(Context.DOWNLOAD_SERVICE)
+            as DownloadManager
     val retrofit = Retrofit.Builder()
         .baseUrl(MainActivity.BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
-
     val service = retrofit.create(InstagramService::class.java)
 
     fun getMetaPost(url: String) = viewModelScope.launch {
         val metaPost = service.getMetaPost(url)
-        Log.d(
-            "TAK", "gettinmetapost:> ${metaPost.graphql}"
-        )
-        Log.d(
-            "TAK", "simplevideourl:> ${metaPost.graphql.shortcodeMedia.simpleVideoUrl()}"
-        )
         val media = metaPost.graphql.shortcodeMedia
-        val request = DownloadManager.Request(Uri.parse(media.videoUrl)).apply {
+        Log.d("TAK", media.toString())
+        val downloadUrl = if (media.isVideo) media.videoUrl else media.displayResources.last().src
+        Log.d("TAK", "$downloadUrl")
+        val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setNotificationVisibility(VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            setTitle(media.title)
             setDestinationInExternalPublicDir(
                 Environment.DIRECTORY_DOWNLOADS,
-                "${MainActivity.DOWNLOAD_FOLDER}${media.title}"
+                "${MainActivity.DOWNLOAD_FOLDER}${Date()}"
             )
         }
-        val manager = app.getSystemService(Context.DOWNLOAD_SERVICE)
-                as DownloadManager
-        manager.enqueue(request)
+        downloadManager.enqueue(request)
     }
 }
