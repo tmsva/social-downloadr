@@ -8,10 +8,15 @@ import android.net.Uri
 import android.os.Environment
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
+import free.thirdpack.instadownloader.data.Node
+import free.thirdpack.instadownloader.data.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
@@ -25,19 +30,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         .build()
     val service = retrofit.create(InstagramService::class.java)
 
-    fun getMetaPost(url: String) = viewModelScope.launch {
+    fun getMetaPost(url: String) = liveData {
         val metaPost = service.getMetaPost(url)
-        val media = metaPost.graphql.shortcodeMedia
-        Log.d("TAK", media.toString())
-        val downloadUrl = if (media.isVideo) media.videoUrl else media.displayResources.last().src
+        val node = metaPost.graphql.shortcodeMedia
+        Log.d("TAK", node.toString())
+        if (node.type == Node.SIDECAR) {
+            val sideNodes = node.sidecar!!.edges.map { it.node }
+            emit(Result.Loading(sideNodes))
+        } else {
+            downloadMedia(node)
+            emit(Result.Success(null))
+        }
+    }
+
+    suspend fun downloadMedia(node: Node) = withContext(Dispatchers.IO) {
+        val downloadUrl =
+            if (node.isVideo) node.videoUrl else node.displayResources.last().src
         Log.d("TAK", "$downloadUrl")
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
-            setNotificationVisibility(VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setDestinationInExternalPublicDir(
                 Environment.DIRECTORY_DOWNLOADS,
                 "${MainActivity.DOWNLOAD_FOLDER}${Date()}"
             )
-        }
+        }.setNotificationVisibility(VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         downloadManager.enqueue(request)
+    }
+
+    fun batchMediaDownload(
+        selectedNodes: BooleanArray,
+        nodes: List<Node>
+    ) = viewModelScope.launch {
+        val selectedMedia = if (selectedNodes[0]) nodes else
+            nodes.filterIndexed { index, _ -> selectedNodes[index + 1] }
+        selectedMedia.forEach { downloadMedia(it) }
     }
 }

@@ -4,5 +4,5 @@ import com.google.gson.annotations.SerializedName
 
 data class Graphql(
     @SerializedName("shortcode_media")
-    val shortcodeMedia: ShortcodeMedia
+    val shortcodeMedia: Node
 )
