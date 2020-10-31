@@ -8,7 +8,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
-import free.thirdpack.instadownloader.data.Node
+import free.thirdpack.instadownloader.data.IgMedia
 import free.thirdpack.instadownloader.data.Result
 import free.thirdpack.instadownloader.viewmodels.MainViewModel
 
@@ -58,8 +58,8 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun showMediaSelectionDialog(nodes: List<Node>) {
-        val totalSize = nodes.size + 1
+    private fun showMediaSelectionDialog(igMedia: List<IgMedia>) {
+        val totalSize = igMedia.size + 1
         val choiceItems = Array(totalSize) { if (it == 0) "All" else "$it" }
         val checkedItems = BooleanArray(totalSize) { it == 0 }
 
@@ -67,7 +67,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Select item(s) to download")
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { dialog, which ->
-                viewModel.batchMediaDownload(checkedItems, nodes)
+                viewModel.batchMediaDownload(checkedItems, igMedia)
             }
             .setMultiChoiceItems(choiceItems, checkedItems) { dialog, which, isChecked ->
                 if (isChecked) {

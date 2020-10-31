@@ -12,7 +12,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
-import free.thirdpack.instadownloader.data.Node
+import free.thirdpack.instadownloader.data.IgMedia
 import free.thirdpack.instadownloader.data.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,8 +29,8 @@ class MainViewModel @ViewModelInject constructor(
         val metaPost = igService.getMetaPost(url)
         val node = metaPost.graphql.shortcodeMedia
         Log.d("TAK", node.toString())
-        if (node.type == Node.SIDECAR) {
-            val sideNodes = node.sidecar!!.edges.map { it.node }
+        if (node.type == IgMedia.SIDECAR) {
+            val sideNodes = node.sidecar!!.edges.map { it.igMedia }
             emit(Result.Loading(sideNodes))
         } else {
             downloadMedia(node)
@@ -38,9 +38,9 @@ class MainViewModel @ViewModelInject constructor(
         }
     }
 
-    suspend fun downloadMedia(node: Node) = withContext(Dispatchers.IO) {
+    suspend fun downloadMedia(igMedia: IgMedia) = withContext(Dispatchers.IO) {
         val downloadUrl =
-            if (node.isVideo) node.videoUrl else node.displayResources.last().src
+            if (igMedia.isVideo) igMedia.videoUrl else igMedia.displayResources.last().src
         Log.d("TAK", "$downloadUrl")
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setDestinationInExternalPublicDir(
@@ -53,10 +53,10 @@ class MainViewModel @ViewModelInject constructor(
 
     fun batchMediaDownload(
         selectedNodes: BooleanArray,
-        nodes: List<Node>
+        igMedia: List<IgMedia>
     ) = viewModelScope.launch {
-        val selectedMedia = if (selectedNodes[0]) nodes else
-            nodes.filterIndexed { index, _ -> selectedNodes[index + 1] }
+        val selectedMedia = if (selectedNodes[0]) igMedia else
+            igMedia.filterIndexed { index, _ -> selectedNodes[index + 1] }
         selectedMedia.forEach { downloadMedia(it) }
     }
 }

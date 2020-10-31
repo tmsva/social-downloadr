@@ -2,7 +2,7 @@ package free.thirdpack.instadownloader.data
 
 import com.google.gson.annotations.SerializedName
 
-data class Node(
+data class IgMedia(
     @field:SerializedName("__typename")
     val type: String,
     @field:SerializedName("is_video")
