@@ -3,10 +3,10 @@ package free.thirdpack.instadownloader.viewmodels
 import android.app.Application
 import android.app.DownloadManager
 import android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
-import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
+import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
@@ -17,21 +17,16 @@ import free.thirdpack.instadownloader.data.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.util.*
 
-class MainViewModel(app: Application) : AndroidViewModel(app) {
-    val downloadManager = app.getSystemService(Context.DOWNLOAD_SERVICE)
-            as DownloadManager
-    val retrofit = Retrofit.Builder()
-        .baseUrl(MainActivity.BASE_URL)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-    val service = retrofit.create(InstagramService::class.java)
+class MainViewModel @ViewModelInject constructor(
+    app: Application,
+    private val igService: InstagramService,
+    private val downloadManager: DownloadManager,
+) : AndroidViewModel(app) {
 
     fun getMetaPost(url: String) = liveData {
-        val metaPost = service.getMetaPost(url)
+        val metaPost = igService.getMetaPost(url)
         val node = metaPost.graphql.shortcodeMedia
         Log.d("TAK", node.toString())
         if (node.type == Node.SIDECAR) {

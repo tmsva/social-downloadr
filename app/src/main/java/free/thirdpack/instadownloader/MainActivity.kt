@@ -7,10 +7,12 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import dagger.hilt.android.AndroidEntryPoint
 import free.thirdpack.instadownloader.data.Node
 import free.thirdpack.instadownloader.data.Result
 import free.thirdpack.instadownloader.viewmodels.MainViewModel
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
 
