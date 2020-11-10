@@ -1,10 +1,14 @@
 package free.thirdpack.instadownloader.data
 
 import android.app.DownloadManager
+import android.content.ClipDescription.MIMETYPE_TEXT_PLAIN
+import android.content.ClipboardManager
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
 import kotlinx.coroutines.Dispatchers
@@ -15,11 +19,15 @@ import javax.inject.Singleton
 
 @Singleton
 class DownloadRepository @Inject constructor(
+    private val clipboard: ClipboardManager,
     private val downloadManager: DownloadManager,
     private val igService: InstagramService
 ) {
 
     private val mMediaQueue = MutableLiveData<List<IgMedia>?>()
+    private val mClipboardPaste = MutableLiveData<CharSequence>()
+
+    val clipboardPaste = mClipboardPaste as LiveData<CharSequence>
 
     val mediaQueue = mMediaQueue.map {
         if (it == null || it.isEmpty())
@@ -63,5 +71,12 @@ class DownloadRepository @Inject constructor(
         val selectedMedia = if (selectedNodes[0]) media else
             media.filterIndexed { index, _ -> selectedNodes[index + 1] }
         selectedMedia.forEach { downloadMedia(it) }
+    }
+
+    fun clipboardPaste() = with(clipboard) {
+        if (hasPrimaryClip() && primaryClipDescription!!.hasMimeType(MIMETYPE_TEXT_PLAIN)) {
+            val item = primaryClip!!.getItemAt(0).text
+            mClipboardPaste.value = item
+        }
     }
 }

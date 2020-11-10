@@ -21,7 +21,14 @@ class DownloadFragment : Fragment() {
     ): View? {
         val binding = FragmentDownloadBinding.inflate(inflater, container, false)
         binding.model = viewModel
+        subscribeUi(binding)
         return binding.root
+    }
+
+    private fun subscribeUi(binding: FragmentDownloadBinding) {
+        viewModel.clipboardPaste.observe(viewLifecycleOwner) {
+            binding.edtUrl.append(it)
+        }
     }
 
 }

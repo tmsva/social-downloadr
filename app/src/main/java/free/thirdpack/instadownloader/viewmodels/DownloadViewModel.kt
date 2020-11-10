@@ -11,6 +11,11 @@ class DownloadViewModel @ViewModelInject constructor(
 ) : ViewModel() {
 
     val mediaQueue = repository.mediaQueue
+    val clipboardPaste = repository.clipboardPaste
+
+    fun clipboardPaste() = viewModelScope.launch {
+        repository.clipboardPaste()
+    }
 
     fun checkUrl(
         postUrl: String
