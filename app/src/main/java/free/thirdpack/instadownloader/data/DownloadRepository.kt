@@ -1,40 +1,45 @@
-package free.thirdpack.instadownloader.viewmodels
+package free.thirdpack.instadownloader.data
 
-import android.app.Application
 import android.app.DownloadManager
-import android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import androidx.hilt.lifecycle.ViewModelInject
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
-import free.thirdpack.instadownloader.data.IgMedia
-import free.thirdpack.instadownloader.data.Result
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class MainViewModel @ViewModelInject constructor(
-    app: Application,
-    private val igService: InstagramService,
+@Singleton
+class DownloadRepository @Inject constructor(
     private val downloadManager: DownloadManager,
-) : AndroidViewModel(app) {
+    private val igService: InstagramService
+) {
 
-    fun getMetaPost(url: String) = liveData {
-        val metaPost = igService.getMetaPost(url)
+    private val mMediaQueue = MutableLiveData<List<IgMedia>?>()
+
+    val mediaQueue = mMediaQueue.map {
+        if (it == null || it.isEmpty())
+            -1
+        else if (it.size > 1)
+            it.size
+        else 0
+    }
+
+    suspend fun checkUrl(url: String) = withContext(Dispatchers.IO) {
+        val postId = url.split("/")[4]
+        val metaPost = igService.getMetaPost(postId)
         val node = metaPost.graphql.shortcodeMedia
         Log.d("TAK", node.toString())
         if (node.type == IgMedia.SIDECAR) {
             val sideNodes = node.sidecar!!.edges.map { it.igMedia }
-            emit(Result.Loading(sideNodes))
+            mMediaQueue.postValue(sideNodes)
         } else {
+            mMediaQueue.postValue(listOf(node))
             downloadMedia(node)
-            emit(Result.Success(null))
         }
     }
 
@@ -47,16 +52,16 @@ class MainViewModel @ViewModelInject constructor(
                 Environment.DIRECTORY_DOWNLOADS,
                 "${MainActivity.DOWNLOAD_FOLDER}${Date()}"
             )
-        }.setNotificationVisibility(VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        }.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         downloadManager.enqueue(request)
     }
 
-    fun batchMediaDownload(
-        selectedNodes: BooleanArray,
-        igMedia: List<IgMedia>
-    ) = viewModelScope.launch {
-        val selectedMedia = if (selectedNodes[0]) igMedia else
-            igMedia.filterIndexed { index, _ -> selectedNodes[index + 1] }
+    suspend fun batchMediaDownload(
+        selectedNodes: BooleanArray
+    ) {
+        val media = mMediaQueue.value!!
+        val selectedMedia = if (selectedNodes[0]) media else
+            media.filterIndexed { index, _ -> selectedNodes[index + 1] }
         selectedMedia.forEach { downloadMedia(it) }
     }
 }

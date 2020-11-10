@@ -8,13 +8,11 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import dagger.hilt.android.AndroidEntryPoint
-import free.thirdpack.instadownloader.data.IgMedia
-import free.thirdpack.instadownloader.data.Result
-import free.thirdpack.instadownloader.viewmodels.MainViewModel
+import free.thirdpack.instadownloader.viewmodels.DownloadViewModel
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    private val viewModel: MainViewModel by viewModels()
+    private val viewModel: DownloadViewModel by viewModels()
 
     companion object {
         const val TYPE_TEXT_PLAIN = "text/plain"
@@ -27,6 +25,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         intent?.let { handleMediaIntent(it) }
+        subscribeUi()
+    }
+
+    private fun subscribeUi() {
+        viewModel.mediaQueue.observe(this@MainActivity) { mediaCount ->
+            when (mediaCount) {
+                -1 -> Toast.makeText(
+                    this@MainActivity,
+                    "Error al realizar la descarga",
+                    Toast.LENGTH_SHORT
+                ).show()
+                0 -> Toast.makeText(
+                    this@MainActivity,
+                    "Downloading",
+                    Toast.LENGTH_SHORT
+                ).show()
+                else -> showMediaSelectionDialog(mediaCount)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -39,27 +56,13 @@ class MainActivity : AppCompatActivity() {
             val url = clipData!!.getItemAt(0).text as String
             Log.d("TAK", url)
             if (url.contains(DOMAIN)) {
-                val postId = url.split("/")[4]
-                Log.d("TAK", "getting meta data")
-                viewModel.getMetaPost(postId).observe(this@MainActivity) { mediaCount ->
-                    when (mediaCount) {
-                        //is Result.Success ->
-                        is Result.Loading -> showMediaSelectionDialog(mediaCount.data!!)
-                        is Result.Error ->
-                            Toast.makeText(
-                                this@MainActivity,
-                                "Error al realizar la descarga",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                    }
-                }
+                viewModel.checkUrl(url)
             }
         }
     }
 
-
-    private fun showMediaSelectionDialog(igMedia: List<IgMedia>) {
-        val totalSize = igMedia.size + 1
+    private fun showMediaSelectionDialog(mediaCount: Int) {
+        val totalSize = mediaCount + 1
         val choiceItems = Array(totalSize) { if (it == 0) "All" else "$it" }
         val checkedItems = BooleanArray(totalSize) { it == 0 }
 
@@ -67,7 +70,7 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Select item(s) to download")
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(android.R.string.ok) { dialog, which ->
-                viewModel.batchMediaDownload(checkedItems, igMedia)
+                viewModel.batchMediaDownload(checkedItems)
             }
             .setMultiChoiceItems(choiceItems, checkedItems) { dialog, which, isChecked ->
                 if (isChecked) {

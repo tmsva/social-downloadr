@@ -1,20 +1,20 @@
 package free.thirdpack.instadownloader.di
 
-import android.app.Activity
+import android.app.Application
 import android.app.DownloadManager
 import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityComponent
+import dagger.hilt.android.components.ApplicationComponent
 
 @Module
-@InstallIn(ActivityComponent::class)
+@InstallIn(ApplicationComponent::class)
 object NetworkModule {
 
     @Provides
     fun provideDownloadManager(
-        activity: Activity
+        app: Application
     ): DownloadManager =
-        activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        app.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 }

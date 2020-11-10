@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">InstaDownloader</string>
+    <string name="download">Descargar</string>
+    <string name="enter_url">Ingresa la url del post para descargar</string>
+</resources>
