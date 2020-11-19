@@ -1,8 +1,10 @@
 package free.thirdpack.instadownloader.data
 
 import android.app.DownloadManager
+import android.app.DownloadManager.*
 import android.content.ClipDescription.MIMETYPE_TEXT_PLAIN
 import android.content.ClipboardManager
+import android.database.Cursor
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
@@ -16,6 +18,7 @@ import kotlinx.coroutines.withContext
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.concurrent.schedule
 
 @Singleton
 class DownloadRepository @Inject constructor(
@@ -25,9 +28,11 @@ class DownloadRepository @Inject constructor(
 ) {
 
     private val mMediaQueue = MutableLiveData<List<IgMedia>?>()
+    private val mDownloads = MutableLiveData<MutableMap<Long, Int>>(mutableMapOf())
     private val mClipboardPaste = MutableLiveData<CharSequence>()
 
     val clipboardPaste = mClipboardPaste as LiveData<CharSequence>
+    val downloads = mDownloads as LiveData<MutableMap<Long, Int>>
 
     val mediaQueue = mMediaQueue.map {
         if (it == null || it.isEmpty())
@@ -60,8 +65,40 @@ class DownloadRepository @Inject constructor(
                 Environment.DIRECTORY_DOWNLOADS,
                 "${MainActivity.DOWNLOAD_FOLDER}${Date()}"
             )
-        }.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        downloadManager.enqueue(request)
+        }.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        enqueueDownload(request)
+    }
+
+    private fun enqueueDownload(request: Request) {
+        val downloadId = downloadManager.enqueue(request)
+        val downloadsMap = mDownloads.value!!
+        scheduleProgress(downloadId, downloadsMap)
+        Log.d("TAKKstart", downloadsMap.toString())
+        mDownloads.postValue(downloadsMap)
+    }
+
+    private fun scheduleProgress(downloadId: Long, downloads: MutableMap<Long, Int>) {
+        downloads.set(downloadId, -1)
+        Timer().schedule(100, 300) {
+            val download = downloadManager.query(Query().setFilterById(downloadId))
+            download.moveToFirst()
+            val status = download.run { getInt(getColumnIndex(COLUMN_STATUS)) }
+            val progress = if (status == STATUS_SUCCESSFUL) {
+                cancel()
+                100
+            } else getProgress(download)
+            download.close()
+            downloads.set(downloadId, progress)
+            Log.d("TAKKupdate", downloads.toString())
+            mDownloads.postValue(downloads)
+        }
+    }
+
+    private fun getProgress(download: Cursor): Int = with(download) {
+        val downloaded = getInt(getColumnIndex(COLUMN_BYTES_DOWNLOADED_SO_FAR))
+        val total = getInt(getColumnIndex(COLUMN_TOTAL_SIZE_BYTES))
+        val progress = (downloaded * 1f / total) * 100
+        progress.toInt()
     }
 
     suspend fun batchMediaDownload(
