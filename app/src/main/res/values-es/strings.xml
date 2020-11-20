@@ -3,4 +3,7 @@
     <string name="app_name">InstaDownloader</string>
     <string name="download">Descargar</string>
     <string name="enter_url">Ingresa la url del post para descargar</string>
+    <string name="downloads">Descargas</string>
+    <string name="history">Historial</string>
+    <string name="empty">" "</string>
 </resources>

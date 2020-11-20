@@ -3,11 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/downloadFragment">
+    app:startDestination="@id/homeViewPagerFragment">
 
     <fragment
-        android:id="@+id/downloadFragment"
-        android:name="free.thirdpack.instadownloader.DownloadFragment"
-        android:label="fragment_download"
-        tools:layout="@layout/fragment_download" />
+        android:id="@+id/homeViewPagerFragment"
+        android:name="free.thirdpack.instadownloader.HomeViewPagerFragment"
+        android:label="fragment_home_view_pager"
+        tools:layout="@layout/fragment_home_view_pager" />
 </navigation>
