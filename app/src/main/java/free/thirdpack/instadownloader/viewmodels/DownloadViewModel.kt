@@ -12,6 +12,7 @@ class DownloadViewModel @ViewModelInject constructor(
 
     val mediaQueue = repository.mediaQueue
     val clipboardPaste = repository.clipboardPaste
+    val downloads = repository.downloads
 
     fun clipboardPaste() = viewModelScope.launch {
         repository.clipboardPaste()

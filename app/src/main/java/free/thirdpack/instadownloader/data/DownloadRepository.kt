@@ -14,6 +14,8 @@ import androidx.lifecycle.map
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 import javax.inject.Inject
@@ -24,15 +26,17 @@ import kotlin.concurrent.schedule
 class DownloadRepository @Inject constructor(
     private val clipboard: ClipboardManager,
     private val downloadManager: DownloadManager,
-    private val igService: InstagramService
+    private val igService: InstagramService,
+    private val downloadMediaDao: DownloadMediaDao
 ) {
 
     private val mMediaQueue = MutableLiveData<List<IgMedia>?>()
-    private val mDownloads = MutableLiveData<MutableMap<Long, Int>>(mutableMapOf())
+
     private val mClipboardPaste = MutableLiveData<CharSequence>()
 
     val clipboardPaste = mClipboardPaste as LiveData<CharSequence>
-    val downloads = mDownloads as LiveData<MutableMap<Long, Int>>
+
+    val downloads = downloadMediaDao.getAll()
 
     val mediaQueue = mMediaQueue.map {
         if (it == null || it.isEmpty())
@@ -69,28 +73,43 @@ class DownloadRepository @Inject constructor(
         enqueueDownload(request)
     }
 
-    private fun enqueueDownload(request: Request) {
+    private suspend fun enqueueDownload(request: Request) {
         val downloadId = downloadManager.enqueue(request)
-        val downloadsMap = mDownloads.value!!
-        scheduleProgress(downloadId, downloadsMap)
-        Log.d("TAKKstart", downloadsMap.toString())
-        mDownloads.postValue(downloadsMap)
+        insertDownloadMedia(downloadId)
+        scheduleProgressUpdate(downloadId)
     }
 
-    private fun scheduleProgress(downloadId: Long, downloads: MutableMap<Long, Int>) {
-        downloads.set(downloadId, -1)
-        Timer().schedule(100, 300) {
-            val download = downloadManager.query(Query().setFilterById(downloadId))
-            download.moveToFirst()
-            val status = download.run { getInt(getColumnIndex(COLUMN_STATUS)) }
-            val progress = if (status == STATUS_SUCCESSFUL) {
-                cancel()
-                100
-            } else getProgress(download)
-            download.close()
-            downloads.set(downloadId, progress)
-            Log.d("TAKKupdate", downloads.toString())
-            mDownloads.postValue(downloads)
+    private suspend fun insertDownloadMedia(downloadId: Long) = withContext(Dispatchers.IO) {
+        getManagerDownload(downloadId)?.apply {
+            val downloadMedia = DownloadMedia(
+                downloadId,
+                getString(getColumnIndex(COLUMN_STATUS)),
+                0,
+                getString(getColumnIndex(COLUMN_LOCAL_URI)),
+                getInt(getColumnIndex(COLUMN_TOTAL_SIZE_BYTES))
+            )
+            downloadMediaDao.insert(downloadMedia)
+        }!!.close()
+    }
+
+    private fun getManagerDownload(downloadId: Long): Cursor? {
+        val download = downloadManager.query(Query().setFilterById(downloadId))
+        return download.takeIf { it.moveToFirst() }
+    }
+
+    private fun scheduleProgressUpdate(downloadId: Long) = Timer().schedule(100, 300) {
+        GlobalScope.launch(Dispatchers.IO) {
+            getManagerDownload(downloadId)?.apply {
+                val download = downloadMediaDao.getById(downloadId)
+                val status = getInt(getColumnIndex(COLUMN_STATUS))
+                val progress = if (status == STATUS_SUCCESSFUL) {
+                    this@schedule.cancel()
+                    download.uri = getString(getColumnIndex(COLUMN_LOCAL_URI))
+                    100
+                } else getProgress(this)
+                download.progress = progress
+                downloadMediaDao.update(download)
+            }!!.close()
         }
     }
 

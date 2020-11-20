@@ -1,6 +1,7 @@
 package free.thirdpack.instadownloader
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +27,10 @@ class DownloadFragment : Fragment() {
     }
 
     private fun subscribeUi(binding: FragmentDownloadBinding) {
+        viewModel.downloads.observe(viewLifecycleOwner) {
+            Log.d("TAKhistory", it.toString())
+        }
+
         viewModel.clipboardPaste.observe(viewLifecycleOwner) {
             binding.edtUrl.append(it)
         }
