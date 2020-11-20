@@ -83,7 +83,7 @@ class DownloadRepository @Inject constructor(
         getManagerDownload(downloadId)?.apply {
             val downloadMedia = DownloadMedia(
                 downloadId,
-                getString(getColumnIndex(COLUMN_STATUS)),
+                getInt(getColumnIndex(COLUMN_STATUS)),
                 0,
                 getString(getColumnIndex(COLUMN_LOCAL_URI)),
                 getInt(getColumnIndex(COLUMN_TOTAL_SIZE_BYTES))
@@ -107,6 +107,8 @@ class DownloadRepository @Inject constructor(
                     download.uri = getString(getColumnIndex(COLUMN_LOCAL_URI))
                     100
                 } else getProgress(this)
+                download.size = getInt(getColumnIndex(COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                download.status = status
                 download.progress = progress
                 downloadMediaDao.update(download)
             }!!.close()

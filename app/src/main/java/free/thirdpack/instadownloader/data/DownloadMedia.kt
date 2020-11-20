@@ -6,8 +6,8 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "download_media")
 data class DownloadMedia(
     @PrimaryKey val uid: Long,
-    val status: String,
+    var status: Int,
     var progress: Int = -1,
     var uri: String?,
-    val size: Int
+    var size: Int
 )
