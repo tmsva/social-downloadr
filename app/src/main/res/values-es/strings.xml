@@ -6,4 +6,10 @@
     <string name="downloads">Descargas</string>
     <string name="history">Historial</string>
     <string name="empty">" "</string>
+    <string name="download_status">Descarga %1$s</string>
+    <string name="pending">pendiente</string>
+    <string name="failed">fallida</string>
+    <string name="downloading">Descargando</string>
+    <string name="paused">pausada</string>
+    <string name="complete">completa</string>
 </resources>

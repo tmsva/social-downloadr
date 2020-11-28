@@ -7,4 +7,11 @@
     <string name="downloads">Downloads</string>
     <string name="history">History</string>
     <string name="empty">" "</string>
+    <string name="progress_total_bytes" translatable="false">%1$s / %2$s</string>
+    <string name="download_status">Download %1$s</string>
+    <string name="pending">pending</string>
+    <string name="failed">failed</string>
+    <string name="downloading">Downloading</string>
+    <string name="paused">paused</string>
+    <string name="complete">complete</string>
 </resources>

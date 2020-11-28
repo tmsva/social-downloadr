@@ -13,6 +13,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.map
 import free.thirdpack.instadownloader.MainActivity
 import free.thirdpack.instadownloader.api.InstagramService
+import free.thirdpack.instadownloader.utils.Formatter
+import free.thirdpack.instadownloader.utils.Mapper.mapDownloadMedia
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -64,31 +66,23 @@ class DownloadRepository @Inject constructor(
         val downloadUrl =
             if (igMedia.isVideo) igMedia.videoUrl else igMedia.displayResources.last().src
         Log.d("TAK", "$downloadUrl")
+        val filename = Formatter.formatFilename(igMedia.title)
         val request = DownloadManager.Request(Uri.parse(downloadUrl)).apply {
             setDestinationInExternalPublicDir(
                 Environment.DIRECTORY_DOWNLOADS,
-                "${MainActivity.DOWNLOAD_FOLDER}${Date()}"
+                "${MainActivity.DOWNLOAD_FOLDER}/$filename"
             )
         }.setNotificationVisibility(Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        enqueueDownload(request)
-    }
 
-    private suspend fun enqueueDownload(request: Request) {
-        val downloadId = downloadManager.enqueue(request)
-        insertDownloadMedia(downloadId)
-        scheduleProgressUpdate(downloadId)
+        downloadManager.enqueue(request).let {
+            insertDownloadMedia(it)
+            scheduleProgressUpdate(it)
+        }
     }
 
     private suspend fun insertDownloadMedia(downloadId: Long) = withContext(Dispatchers.IO) {
         getManagerDownload(downloadId)?.apply {
-            val downloadMedia = DownloadMedia(
-                downloadId,
-                getInt(getColumnIndex(COLUMN_STATUS)),
-                0,
-                getString(getColumnIndex(COLUMN_LOCAL_URI)),
-                getInt(getColumnIndex(COLUMN_TOTAL_SIZE_BYTES))
-            )
-            downloadMediaDao.insert(downloadMedia)
+            downloadMediaDao.insert(mapDownloadMedia())
         }!!.close()
     }
 
@@ -100,26 +94,12 @@ class DownloadRepository @Inject constructor(
     private fun scheduleProgressUpdate(downloadId: Long) = Timer().schedule(100, 300) {
         GlobalScope.launch(Dispatchers.IO) {
             getManagerDownload(downloadId)?.apply {
-                val download = downloadMediaDao.getById(downloadId)
-                val status = getInt(getColumnIndex(COLUMN_STATUS))
-                val progress = if (status == STATUS_SUCCESSFUL) {
+                val download = mapDownloadMedia()
+                if (download.isComplete)
                     this@schedule.cancel()
-                    download.uri = getString(getColumnIndex(COLUMN_LOCAL_URI))
-                    100
-                } else getProgress(this)
-                download.size = getInt(getColumnIndex(COLUMN_BYTES_DOWNLOADED_SO_FAR))
-                download.status = status
-                download.progress = progress
                 downloadMediaDao.update(download)
             }!!.close()
         }
-    }
-
-    private fun getProgress(download: Cursor): Int = with(download) {
-        val downloaded = getInt(getColumnIndex(COLUMN_BYTES_DOWNLOADED_SO_FAR))
-        val total = getInt(getColumnIndex(COLUMN_TOTAL_SIZE_BYTES))
-        val progress = (downloaded * 1f / total) * 100
-        progress.toInt()
     }
 
     suspend fun batchMediaDownload(
