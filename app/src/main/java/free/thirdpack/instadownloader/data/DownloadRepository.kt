@@ -50,6 +50,7 @@ class DownloadRepository @Inject constructor(
 
     suspend fun checkUrl(url: String) = withContext(Dispatchers.IO) {
         val postId = url.split("/")[4]
+        Log.d("TAK", "redy or not here i come")
         val metaPost = igService.getMetaPost(postId)
         val node = metaPost.graphql.shortcodeMedia
         Log.d("TAK", node.toString())

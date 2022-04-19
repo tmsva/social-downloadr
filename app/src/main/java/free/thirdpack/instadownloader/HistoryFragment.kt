@@ -1,5 +1,6 @@
 package free.thirdpack.instadownloader
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.SimpleItemAnimator
 import dagger.hilt.android.AndroidEntryPoint
 import free.thirdpack.instadownloader.adapters.DownloadAdapter
+import free.thirdpack.instadownloader.data.DownloadMedia
 import free.thirdpack.instadownloader.databinding.FragmentHistoryBinding
 import free.thirdpack.instadownloader.viewmodels.HistoryViewModel
 
@@ -22,13 +24,19 @@ class HistoryFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val binding = FragmentHistoryBinding.inflate(inflater, container, false)
-        val adapter = DownloadAdapter()
+        val adapter = DownloadAdapter { media ->
+            showItemOptions(media)
+        }
         with(binding.downloadHistory) {
             (itemAnimator as SimpleItemAnimator).supportsChangeAnimations = false
             setAdapter(adapter)
         }
         subscribeUi(adapter)
         return binding.root
+    }
+
+    private fun showItemOptions(media: DownloadMedia) {
+        AlertDialog.Builder(activity).show()
     }
 
     private fun subscribeUi(adapter: DownloadAdapter) {

@@ -7,17 +7,23 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import free.thirdpack.instadownloader.data.DownloadMedia
 import free.thirdpack.instadownloader.databinding.ListItemDownloadBinding
+import free.thirdpack.instadownloader.generated.callback.OnClickListener
 
-class DownloadAdapter : ListAdapter<DownloadMedia, DownloadAdapter.ViewHolder>(
+class DownloadAdapter(
+        val listener: (media: DownloadMedia) -> Unit
+) : ListAdapter<DownloadMedia, DownloadAdapter.ViewHolder>(
         DownloadDiffCallback()
 ) {
 
-    class ViewHolder(
+    inner class ViewHolder(
             private val binding: ListItemDownloadBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(download: DownloadMedia) {
             with(binding) {
+                root.setOnClickListener {
+                    listener.invoke(download)
+                }
                 setDownload(download)
                 executePendingBindings()
             }
